@@ -6,6 +6,8 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+mod parsing;
+
 #[wasm_bindgen]
 extern "C" {
     fn alert(s: &str);

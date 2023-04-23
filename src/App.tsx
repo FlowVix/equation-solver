@@ -27,7 +27,7 @@ const DESCRIPTIONS = [
         text: [
             "Supported operators: + - * / ^ %",
             "Supported functions: sqrt, ln, all trig and hyperbolic trig functions and inverses",
-            "Predefined constants: E, PI, I",
+            "Predefined constants: e, pi, i",
             "Complex numbers are supported",
         ],
     },
