@@ -2,6 +2,8 @@ import { useState } from "react";
 import "./App.css";
 
 import * as wasm from "../wasm-lib/pkg/wasm_lib";
+import { DEFAULT_EQS, detectVars } from "./equation";
+import { PositionedError } from "../wasm-lib/pkg/wasm_lib";
 
 const DESCRIPTIONS = [
     {
@@ -33,13 +35,11 @@ const DESCRIPTIONS = [
     },
 ];
 
-const DEFAULT_EQS: [number, string, string][] = [
-    [Math.random(), "a * (b + 4)", "14"],
-    [Math.random(), "a + b", "5"],
-];
-
 const App = () => {
     let [equations, setEquations] = useState([...DEFAULT_EQS]);
+    const flattenEqs = () => equations.flatMap(([_, a, b]) => [a, b]);
+
+    let [vars, setVars] = useState(detectVars(flattenEqs()));
 
     return (
         <div className="everything">
@@ -71,18 +71,20 @@ const App = () => {
                 })}
                 <br />
                 <div className="solver">
-                    <button
-                        className="add_button"
-                        onClick={() => {
-                            wasm.test(6);
-                            setEquations([
-                                ...equations,
-                                [Math.random(), "", ""],
-                            ]);
-                        }}
-                    >
-                        Add equation
-                    </button>
+                    <span>
+                        <button
+                            className="add_button"
+                            onClick={() => {
+                                setEquations([
+                                    ...equations,
+                                    [Math.random(), "", ""],
+                                ]);
+                            }}
+                        >
+                            Add equation
+                        </button>
+                        Detected variables: {vars.join(", ")}
+                    </span>
                     <br />
 
                     {equations.map(([id, left, right], i) => (
@@ -90,9 +92,7 @@ const App = () => {
                             <button
                                 className="remove_button"
                                 onClick={() => {
-                                    console.log(equations);
                                     equations.splice(i, 1);
-                                    console.log(equations);
                                     setEquations([...equations]);
                                 }}
                             >
@@ -107,6 +107,7 @@ const App = () => {
                                 onChange={v => {
                                     equations[i][1] = v.target.value;
                                     setEquations([...equations]);
+                                    setVars(detectVars(flattenEqs()));
                                 }}
                             />
                             <span> = </span>
@@ -117,11 +118,30 @@ const App = () => {
                                 onChange={v => {
                                     equations[i][1] = v.target.value;
                                     setEquations([...equations]);
+                                    setVars(detectVars(flattenEqs()));
                                 }}
                             />
                         </div>
                     ))}
                 </div>
+                <button
+                    onClick={() => {
+                        try {
+                            console.log(
+                                wasm.solve(equations.map(([_, a, b]) => [a, b]))
+                            );
+                        } catch (e) {
+                            if (e instanceof PositionedError) {
+                                console.log(e.msg);
+                                console.log(e.eq);
+                                console.log(e.second);
+                            }
+                        }
+                        // wasm.greet(equations[0][1]);
+                    }}
+                >
+                    test
+                </button>
             </div>
         </div>
     );

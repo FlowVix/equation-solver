@@ -1,12 +1,5 @@
-#[derive(Debug, Clone, Copy)]
-pub enum BinOp {
-    Plus,
-    Minus,
-    Mult,
-    Div,
-    Pow,
-    Mod,
-}
+use super::operators::BinOp;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Function {
     Sin,

@@ -32,7 +32,7 @@ pub enum Token {
     ClosedParen,
 
     // Or regular expressions.
-    #[regex(r#"[A-Za-z_][A-Za-z0-9_'`]*"#)]
+    #[regex(r#"[A-Za-z_][A-Za-z0-9_']*"#)]
     Identifier,
 
     End,

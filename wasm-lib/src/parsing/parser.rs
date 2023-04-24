@@ -1,17 +1,18 @@
 #![deny(unused_must_use)]
 
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 use logos::{Lexer, Logos};
 
 use super::{
     ast::ExprNode,
     lexer::{NextOrEnd, Token},
+    operators,
 };
 
-#[derive(Clone)]
 pub struct Parser<'a> {
     lexer: Lexer<'a, Token>,
+    name_map: &'a mut HashMap<String, u16>,
 }
 
 pub type ParseResult<T> = Result<T, String>;
@@ -25,9 +26,12 @@ pub fn unexpected_err_str(found: Token, exp: &str) -> String {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(code: &'a str) -> Self {
+    pub fn new(code: &'a str, map: &'a mut HashMap<String, u16>) -> Self {
         let lexer = Token::lexer(code);
-        Parser { lexer }
+        Parser {
+            lexer,
+            name_map: map,
+        }
     }
 
     pub fn next(&mut self) -> Token {
@@ -84,7 +88,62 @@ impl<'a> Parser<'a> {
         self.expect_tok_named(expect, expect.name())
     }
 
+    pub fn get_name_id(&mut self, name: String) -> u16 {
+        match self.name_map.get(&name) {
+            Some(v) => *v,
+            None => {
+                let id = self.name_map.len() as u16;
+                self.name_map.insert(name, id);
+                id
+            }
+        }
+    }
+
+    pub fn parse_unit(&mut self) -> ParseResult<ExprNode> {
+        Ok(match self.next() {
+            Token::Number => ExprNode::Number(self.slice().parse().unwrap()),
+            Token::E => ExprNode::E,
+            Token::Pi => ExprNode::Pi,
+            Token::I => ExprNode::I,
+            Token::OpenParen => {
+                let v = self.parse_expr()?;
+                self.expect_tok(Token::ClosedParen)?;
+                v
+            }
+            Token::Identifier => ExprNode::Var(self.get_name_id(self.slice().into())),
+            t => return Err(unexpected_err_str(t, "expression")),
+        })
+    }
+
+    pub fn parse_expr(&mut self) -> ParseResult<ExprNode> {
+        self.parse_op(0)
+    }
+
+    pub fn parse_op(&mut self, prec: usize) -> ParseResult<ExprNode> {
+        let next_prec = operators::next_infix(prec);
+
+        let mut left = match next_prec {
+            Some(next_prec) => self.parse_op(next_prec)?,
+            None => self.parse_unit()?,
+        };
+
+        while operators::is_infix_prec(self.peek(), prec) {
+            let op = self.next();
+            let right = if operators::prec_type(prec) == operators::OpType::Left {
+                match next_prec {
+                    Some(next_prec) => self.parse_op(next_prec)?,
+                    None => self.parse_unit()?,
+                }
+            } else {
+                self.parse_op(prec)?
+            };
+            left = ExprNode::BinOp(Box::new(left), op.to_bin_op().unwrap(), Box::new(right))
+        }
+
+        Ok(left)
+    }
+
     pub fn parse(&mut self) -> ParseResult<ExprNode> {
-        todo!()
+        self.parse_expr()
     }
 }
