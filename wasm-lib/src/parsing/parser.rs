@@ -22,7 +22,7 @@ pub fn unexpected_err_str(found: Token, exp: &str) -> String {
 
     // println!("{:?}", bt);
 
-    format!("expected `{}`, found `{}`", exp, found.name())
+    format!("Expected {}, found {}", exp, found.name())
 }
 
 impl<'a> Parser<'a> {
@@ -101,7 +101,29 @@ impl<'a> Parser<'a> {
 
     pub fn parse_unit(&mut self) -> ParseResult<ExprNode> {
         Ok(match self.next() {
-            Token::Number => ExprNode::Number(self.slice().parse().unwrap()),
+            Token::Number => {
+                let mut expr = ExprNode::Number(self.slice().parse().unwrap());
+                match self.peek() {
+                    Token::I => {
+                        self.next();
+                        expr = ExprNode::BinOp(
+                            Box::new(expr),
+                            operators::BinOp::Mult,
+                            Box::new(ExprNode::I),
+                        )
+                    }
+                    Token::Identifier => {
+                        self.next();
+                        expr = ExprNode::BinOp(
+                            Box::new(expr),
+                            operators::BinOp::Mult,
+                            Box::new(ExprNode::Var(self.get_name_id(self.slice().into()))),
+                        )
+                    }
+                    _ => (),
+                }
+                expr
+            }
             Token::E => ExprNode::E,
             Token::Pi => ExprNode::Pi,
             Token::I => ExprNode::I,
@@ -144,6 +166,8 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> ParseResult<ExprNode> {
-        self.parse_expr()
+        let out = self.parse_expr()?;
+        self.expect_tok(Token::End)?;
+        Ok(out)
     }
 }

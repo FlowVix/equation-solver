@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 import * as wasm from "../wasm-lib/pkg/wasm_lib";
-import { DEFAULT_EQS, detectVars } from "./equation";
+import { DEFAULT_EQS, Equation, detectVars, formatComplex } from "./equation";
 import { PositionedError } from "../wasm-lib/pkg/wasm_lib";
 
 const DESCRIPTIONS = [
@@ -13,6 +13,7 @@ const DESCRIPTIONS = [
             modified to work with matrices. An initial random guess for each\
             variable is picked, after which this iterative method is applied\
             until convergence.",
+            "You can control the amount of attempts to find a solution, the number of iterations per attempt, and the epsilon for equality",
         ],
     },
     {
@@ -37,9 +38,50 @@ const DESCRIPTIONS = [
 
 const App = () => {
     let [equations, setEquations] = useState([...DEFAULT_EQS]);
-    const flattenEqs = () => equations.flatMap(([_, a, b]) => [a, b]);
+    const flattenEqs = () => equations.flatMap(eq => [eq.left, eq.right]);
 
     let [vars, setVars] = useState(detectVars(flattenEqs()));
+
+    useEffect(() => {
+        setVars(detectVars(flattenEqs()));
+    }, [equations]);
+
+    let [errMsg, setErrMsg] = useState("");
+    const EMPTY_SOLUTION: [string, [number, number]][] = [];
+    let [solution, setSolution] = useState(EMPTY_SOLUTION);
+
+    const solve = () => {
+        setErrMsg("");
+        setSolution([]);
+        for (let eq of equations) {
+            eq.err_left = false;
+            eq.err_right = false;
+        }
+
+        try {
+            let initial = vars.map(_ => Math.random() * 100 - 50);
+            let solution = wasm.solve(
+                equations.map(eq => [eq.left, eq.right]),
+                1000,
+                new Float64Array(initial)
+            );
+            if (solution != undefined) {
+                setSolution(solution);
+            } else {
+                setErrMsg("No solutions found");
+            }
+        } catch (e) {
+            if (e instanceof PositionedError) {
+                setErrMsg(e.msg);
+                if (e.second) {
+                    equations[e.eq].err_right = true;
+                } else {
+                    equations[e.eq].err_left = true;
+                }
+            }
+        }
+        setEquations([...equations]);
+    };
 
     return (
         <div className="everything">
@@ -70,6 +112,8 @@ const App = () => {
                     );
                 })}
                 <br />
+                <h3>Solver</h3>
+                <hr />
                 <div className="solver">
                     <span>
                         <button
@@ -77,7 +121,7 @@ const App = () => {
                             onClick={() => {
                                 setEquations([
                                     ...equations,
-                                    [Math.random(), "", ""],
+                                    new Equation("", ""),
                                 ]);
                             }}
                         >
@@ -85,15 +129,24 @@ const App = () => {
                         </button>
                         Detected variables: {vars.join(", ")}
                     </span>
+                    {errMsg.length != 0 ? (
+                        <>
+                            <br />
+                            <span className="errormsg">{errMsg}</span>
+                        </>
+                    ) : (
+                        <></>
+                    )}
                     <br />
 
-                    {equations.map(([id, left, right], i) => (
-                        <div className="equation" key={id}>
+                    {equations.map((eq, i) => (
+                        <div className="equation" key={eq.id}>
                             <button
                                 className="remove_button"
                                 onClick={() => {
                                     equations.splice(i, 1);
                                     setEquations([...equations]);
+                                    // setVars(detectVars(flattenEqs()));
                                 }}
                             >
                                 <span className="material-symbols-outlined">
@@ -102,46 +155,51 @@ const App = () => {
                             </button>
                             <input
                                 type="text"
-                                className="equation_input"
-                                defaultValue={left}
+                                className={`equation_input ${
+                                    eq.err_left ? "err" : ""
+                                }`}
+                                defaultValue={eq.left}
                                 onChange={v => {
-                                    equations[i][1] = v.target.value;
+                                    equations[i].left = v.target.value;
                                     setEquations([...equations]);
-                                    setVars(detectVars(flattenEqs()));
+                                    // setVars(detectVars(flattenEqs()));
                                 }}
                             />
                             <span> = </span>
                             <input
                                 type="text"
-                                className="equation_input"
-                                defaultValue={right}
+                                className={`equation_input ${
+                                    eq.err_right ? "err" : ""
+                                }`}
+                                defaultValue={eq.right}
                                 onChange={v => {
-                                    equations[i][1] = v.target.value;
+                                    equations[i].right = v.target.value;
                                     setEquations([...equations]);
-                                    setVars(detectVars(flattenEqs()));
+                                    // setVars(detectVars(flattenEqs()));
                                 }}
                             />
                         </div>
                     ))}
                 </div>
-                <button
-                    onClick={() => {
-                        try {
-                            console.log(
-                                wasm.solve(equations.map(([_, a, b]) => [a, b]))
-                            );
-                        } catch (e) {
-                            if (e instanceof PositionedError) {
-                                console.log(e.msg);
-                                console.log(e.eq);
-                                console.log(e.second);
-                            }
-                        }
-                        // wasm.greet(equations[0][1]);
-                    }}
-                >
-                    test
+                <button className="solve_button" onClick={solve}>
+                    Solve
                 </button>
+                {solution.length != 0 ? (
+                    <>
+                        <h4>Solutions:</h4>
+                        {solution.map(([name, [re, im]], i) => (
+                            <div key={i}>
+                                <span className="solution">{`${name} = ${formatComplex(
+                                    re,
+                                    im
+                                )}`}</span>
+                                <br />
+                            </div>
+                        ))}
+                    </>
+                ) : (
+                    <></>
+                )}
             </div>
         </div>
     );

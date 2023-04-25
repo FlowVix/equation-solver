@@ -1,9 +1,12 @@
 #![deny(unused_must_use)]
 
+mod equation;
 mod utils;
 
 use std::collections::HashMap;
 
+use equation::system::{Equation, System};
+use num_complex::Complex64;
 use parsing::{ast::ExprNode, parser::Parser};
 use wasm_bindgen::prelude::*;
 
@@ -22,23 +25,31 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn solve(eqs: JsValue) -> Result<String, PositionedError> {
+pub fn solve(
+    eqs: JsValue,
+    iter: usize,
+    initial_values: &[f64],
+) -> Result<Option<Vec<JsValue>>, PositionedError> {
     let example: Vec<(String, String)> = serde_wasm_bindgen::from_value(eqs).unwrap();
-    let parsed = get_eqs(&example)?;
-    Ok(format!("{:#?}", parsed))
+    let (system, names) = get_eqs(&example)?;
+
+    let solution = system.solve(iter, initial_values.iter().map(|f| Complex64::new(*f, *f)));
+    match solution {
+        Some(sol) => {
+            return Ok(Some(
+                names
+                    .iter()
+                    .zip(sol)
+                    .map(|(name, sol)| {
+                        serde_wasm_bindgen::to_value(&(name, (sol.re, sol.im))).unwrap()
+                    })
+                    .collect(),
+            ))
+        }
+        None => Ok(None),
+    }
 }
 
-#[derive(Debug)]
-pub struct System {
-    eqs: Vec<Equation>,
-    name_map: HashMap<String, u16>,
-}
-
-#[derive(Debug)]
-pub struct Equation {
-    left: ExprNode,
-    right: ExprNode,
-}
 #[wasm_bindgen]
 pub struct PositionedError {
     msg: String,
@@ -53,7 +64,7 @@ impl PositionedError {
     }
 }
 
-pub fn get_eqs(eqs: &[(String, String)]) -> Result<System, PositionedError> {
+pub fn get_eqs(eqs: &[(String, String)]) -> Result<(System, Vec<String>), PositionedError> {
     let mut out = vec![];
     let mut name_map = HashMap::new();
     for (i, (a, b)) in eqs.iter().enumerate() {
@@ -71,5 +82,17 @@ pub fn get_eqs(eqs: &[(String, String)]) -> Result<System, PositionedError> {
         })?;
         out.push(Equation { left, right })
     }
-    Ok(System { eqs: out, name_map })
+
+    let mut name_vec = vec![String::new(); name_map.len()];
+    for (n, id) in name_map {
+        name_vec[id as usize] = n
+    }
+
+    Ok((
+        System {
+            eqs: out,
+            var_amount: name_vec.len(),
+        },
+        name_vec,
+    ))
 }

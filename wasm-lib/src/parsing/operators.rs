@@ -137,7 +137,7 @@ macro_rules! operators {
 
 operators! {
     Left => [Plus, Minus];
-    Unary => [Minus];
+    Unary => [Plus, Minus];
     Left => [Mult, Div, Mod];
     Right => [Pow];
 }

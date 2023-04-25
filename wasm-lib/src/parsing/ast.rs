@@ -1,4 +1,4 @@
-use super::operators::BinOp;
+use super::operators::{BinOp, UnaryOp};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Function {
@@ -13,7 +13,7 @@ pub enum ExprNode {
     Var(u16),
 
     BinOp(Box<ExprNode>, BinOp, Box<ExprNode>),
-    Negate(Box<ExprNode>),
+    UnaryOp(UnaryOp, Box<ExprNode>),
 
     E,
     Pi,
