@@ -1,7 +1,7 @@
-use num_complex::Complex64;
+use num_complex::{Complex64, ComplexFloat};
 
 use crate::parsing::{
-    ast::ExprNode,
+    ast::{ExprNode, Function},
     operators::{BinOp, UnaryOp},
 };
 
@@ -34,7 +34,31 @@ impl ExprNode {
             ExprNode::E => std::f64::consts::E.into(),
             ExprNode::Pi => std::f64::consts::PI.into(),
             ExprNode::I => Complex64::i(),
-            ExprNode::Func(_, _) => todo!(),
+            ExprNode::Abs(v) => v.run(args).abs().into(),
+            ExprNode::Func(f, v) => {
+                let v = v.run(args);
+                match f {
+                    Function::Sin => v.sin(),
+                    Function::Cos => v.cos(),
+                    Function::Tan => v.tan(),
+                    Function::SinH => v.sinh(),
+                    Function::CosH => v.cosh(),
+                    Function::TanH => v.tanh(),
+                    Function::Asin => v.asin(),
+                    Function::Acos => v.acos(),
+                    Function::Atan => v.atan(),
+                    Function::AsinH => v.asinh(),
+                    Function::AcosH => v.acosh(),
+                    Function::AtanH => v.atanh(),
+                    Function::Ln => v.ln(),
+                    Function::Sqrt => v.sqrt(),
+                    Function::Cbrt => v.cbrt(),
+                    Function::Arg => v.arg().into(),
+                    Function::Re => v.re.into(),
+                    Function::Im => v.im.into(),
+                    Function::Conj => v.conj(),
+                }
+            }
         }
     }
 }

@@ -4,6 +4,8 @@ use std::{collections::HashMap, ops::Range};
 
 use logos::{Lexer, Logos};
 
+use crate::parsing::ast::Function;
+
 use super::{
     ast::ExprNode,
     lexer::{NextOrEnd, Token},
@@ -18,10 +20,6 @@ pub struct Parser<'a> {
 pub type ParseResult<T> = Result<T, String>;
 
 pub fn unexpected_err_str(found: Token, exp: &str) -> String {
-    // let bt = Backtrace::new();
-
-    // println!("{:?}", bt);
-
     format!("Expected {}, found {}", exp, found.name())
 }
 
@@ -132,7 +130,27 @@ impl<'a> Parser<'a> {
                 self.expect_tok(Token::ClosedParen)?;
                 v
             }
-            Token::Identifier => ExprNode::Var(self.get_name_id(self.slice().into())),
+            Token::Pipe => {
+                let v = self.parse_expr()?;
+                self.expect_tok(Token::Pipe)?;
+                ExprNode::Abs(Box::new(v))
+            }
+            Token::Identifier => {
+                let v = self.slice().to_string();
+                if self.skip_tok(Token::OpenParen) {
+                    let Some(func) = Function::from_str(&v) else {
+                        return Err(format!("Unknown function `{}`", v))
+                    };
+                    let v = self.parse_expr()?;
+                    self.expect_tok(Token::ClosedParen)?;
+                    ExprNode::Func(func, Box::new(v))
+                } else {
+                    if Function::from_str(&v).is_some() {
+                        return Err(format!("Cannot use variable with function name `{}`", v));
+                    }
+                    ExprNode::Var(self.get_name_id(v))
+                }
+            }
             t => return Err(unexpected_err_str(t, "expression")),
         })
     }

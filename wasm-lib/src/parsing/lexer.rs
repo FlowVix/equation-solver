@@ -31,6 +31,9 @@ pub enum Token {
     #[token(")")]
     ClosedParen,
 
+    #[token("|")]
+    Pipe,
+
     // Or regular expressions.
     #[regex(r#"[A-Za-z_][A-Za-z0-9_']*"#)]
     Identifier,
@@ -64,6 +67,7 @@ impl Token {
             Token::E => "e",
             Token::Pi => "pi",
             Token::I => "i",
+            Token::Pipe => "`|`",
             Token::OpenParen => "`(`",
             Token::ClosedParen => "`)`",
             Token::Identifier => "variable",

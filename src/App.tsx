@@ -29,7 +29,7 @@ const DESCRIPTIONS = [
         title: "Equations",
         text: [
             "Supported operators: + - * / ^ %",
-            "Supported functions: sqrt, ln, all trig and hyperbolic trig functions and inverses",
+            "Supported functions: " + wasm.funcs(),
             "Predefined constants: e, pi, i",
             "Complex numbers are supported",
         ],
