@@ -13,7 +13,7 @@ const DESCRIPTIONS = [
             modified to work with matrices. An initial random guess for each\
             variable is picked, after which this iterative method is applied\
             until convergence.",
-            "You can control the amount of attempts to find a solution, the number of iterations per attempt, and the epsilon for equality",
+            "You can control the amount of attempts to find a solution and the number of iterations per attempt.",
         ],
     },
     {
@@ -50,6 +50,9 @@ const App = () => {
     const EMPTY_SOLUTION: [string, [number, number]][] = [];
     let [solution, setSolution] = useState(EMPTY_SOLUTION);
 
+    let [attempts, setAttempts] = useState(50);
+    let [iterations, setIterations] = useState(1000);
+
     const solve = () => {
         setErrMsg("");
         setSolution([]);
@@ -59,15 +62,24 @@ const App = () => {
         }
 
         try {
-            let initial = vars.map(_ => Math.random() * 100 - 50);
-            let solution = wasm.solve(
-                equations.map(eq => [eq.left, eq.right]),
-                1000,
-                new Float64Array(initial)
-            );
-            if (solution != undefined) {
-                setSolution(solution);
-            } else {
+            let found = false;
+            for (let i = 0; i < attempts; i++) {
+                let initial = vars.flatMap(_ => [
+                    Math.random() * 100 - 50,
+                    Math.random() * 100 - 50,
+                ]);
+                let solution = wasm.solve(
+                    equations.map(eq => [eq.left, eq.right]),
+                    Math.max(0, iterations),
+                    new Float64Array(initial)
+                );
+                if (solution != undefined) {
+                    found = true;
+                    setSolution(solution);
+                    break;
+                }
+            }
+            if (!found) {
                 setErrMsg("No solutions found");
             }
         } catch (e) {
@@ -86,8 +98,24 @@ const App = () => {
     return (
         <div className="everything">
             <div className="main_panel">
-                <h1>Equation Solver</h1>
-
+                <div className="title">
+                    <div className="signature">
+                        Made by Ursu Radu{" "}
+                        <a
+                            className="github_link"
+                            href="https://github.com/Ursu-Radu/equation-solver"
+                            target="_blank"
+                        >
+                            <img
+                                src="github-mark.svg"
+                                alt="Github"
+                                width="30px"
+                                height="30px"
+                            />
+                        </a>
+                    </div>
+                    <h1>Equation Solver</h1>
+                </div>
                 {DESCRIPTIONS.map((data, i) => {
                     let content = data.text.map((t, i) => (
                         <div key={i}>
@@ -114,6 +142,27 @@ const App = () => {
                 <br />
                 <h3>Solver</h3>
                 <hr />
+                Attempts:{" "}
+                <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    defaultValue={50}
+                    onChange={v => {
+                        setAttempts(parseInt(v.target.value));
+                    }}
+                />{" "}
+                <br />
+                Iterations per attempt:{" "}
+                <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    defaultValue={1000}
+                    onChange={v => {
+                        setIterations(parseInt(v.target.value));
+                    }}
+                />
                 <div className="solver">
                     <span>
                         <button

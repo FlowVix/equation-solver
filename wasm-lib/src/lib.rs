@@ -6,6 +6,7 @@ mod utils;
 use std::collections::HashMap;
 
 use equation::system::{Equation, System};
+use itertools::Itertools;
 use num_complex::Complex64;
 use parsing::{ast::ExprNode, parser::Parser};
 use wasm_bindgen::prelude::*;
@@ -33,7 +34,13 @@ pub fn solve(
     let example: Vec<(String, String)> = serde_wasm_bindgen::from_value(eqs).unwrap();
     let (system, names) = get_eqs(&example)?;
 
-    let solution = system.solve(iter, initial_values.iter().map(|f| Complex64::new(*f, *f)));
+    let solution = system.solve(
+        iter,
+        initial_values
+            .iter()
+            .tuples()
+            .map(|(a, b)| Complex64::new(*a, *b)),
+    );
     match solution {
         Some(sol) => {
             return Ok(Some(

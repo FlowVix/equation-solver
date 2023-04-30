@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::Instant};
 use nalgebra::{DMatrix, DVector};
 use num_complex::Complex64;
 
-use crate::parsing::ast::ExprNode;
+use crate::{log, parsing::ast::ExprNode};
 
 #[derive(Debug)]
 pub struct System {

@@ -54,9 +54,6 @@ impl ExprNode {
                     Function::Sqrt => v.sqrt(),
                     Function::Cbrt => v.cbrt(),
                     Function::Arg => v.arg().into(),
-                    Function::Re => v.re.into(),
-                    Function::Im => v.im.into(),
-                    Function::Conj => v.conj(),
                 }
             }
         }

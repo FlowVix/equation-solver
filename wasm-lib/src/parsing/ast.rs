@@ -61,10 +61,6 @@ functions! {
     Ln: "ln",
 
     Arg: "arg",
-    Re: "re",
-    Im: "im",
-
-    Conj: "conj",
 }
 
 #[derive(Debug, Clone)]
